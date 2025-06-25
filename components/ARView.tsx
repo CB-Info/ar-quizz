@@ -1,27 +1,21 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
-import { Camera, Box } from 'lucide-react-native';
+import { GLView } from 'expo-gl';
+import { Renderer, AR } from 'expo-three';
+import * as THREE from 'three';
+import { Asset } from 'expo-asset';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import { Camera as CameraIcon, Box } from 'lucide-react-native';
 
 interface ARViewProps {
+  model: any;
   objectName: string;
   onARReady?: (ready: boolean) => void;
   showAnimation?: boolean;
 }
 
-export default function ARView({ objectName, onARReady, showAnimation }: ARViewProps) {
-  const [isReady, setIsReady] = useState(true);
-
-  React.useEffect(() => {
-    // Simulate AR initialization
-    const timer = setTimeout(() => {
-      setIsReady(true);
-      onARReady?.(true);
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [onARReady]);
-
-  const getObjectIcon = (name: string) => {
+function EmojiFallback({ objectName, showAnimation }: { objectName: string; showAnimation?: boolean }) {
+  const getIcon = (name: string) => {
     switch (name) {
       case 'apple':
         return '🍎';
@@ -48,7 +42,7 @@ export default function ARView({ objectName, onARReady, showAnimation }: ARViewP
     }
   };
 
-  const getObjectColor = (name: string) => {
+  const getColor = (name: string) => {
     switch (name) {
       case 'apple':
         return '#FF4444';
@@ -79,42 +73,74 @@ export default function ARView({ objectName, onARReady, showAnimation }: ARViewP
     <View style={styles.container}>
       <View style={styles.arSimulation}>
         <View style={styles.cameraOverlay}>
-          <Camera size={32} color="rgba(255,255,255,0.7)" />
+          <CameraIcon size={32} color="rgba(255,255,255,0.7)" />
           <Text style={styles.cameraText}>AR Simulation</Text>
         </View>
-        
-        <View style={[
-          styles.objectContainer,
-          showAnimation && styles.objectAnimated
-        ]}>
-          <View style={[
-            styles.object3D,
-            { backgroundColor: getObjectColor(objectName) }
-          ]}>
-            <Text style={styles.objectEmoji}>
-              {getObjectIcon(objectName)}
-            </Text>
+        <View style={[styles.objectContainer, showAnimation && styles.objectAnimated]}>
+          <View style={[styles.object3D, { backgroundColor: getColor(objectName) }]}>
+            <Text style={styles.objectEmoji}>{getIcon(objectName)}</Text>
           </View>
           <View style={styles.objectShadow} />
         </View>
-
         <View style={styles.arInstructions}>
           <Box size={20} color="rgba(255,255,255,0.8)" />
-          <Text style={styles.instructionText}>
-            Objet 3D: {objectName}
-          </Text>
+          <Text style={styles.instructionText}>Objet 3D: {objectName}</Text>
         </View>
       </View>
-
-      {!isReady && (
-        <View style={styles.loadingOverlay}>
-          <Text style={styles.loadingText}>
-            Initialisation AR...
-          </Text>
-        </View>
-      )}
     </View>
   );
+}
+
+export default function ARView({ model, objectName, onARReady, showAnimation }: ARViewProps) {
+  const [ready, setReady] = useState(false);
+  const requestRef = useRef<number>();
+  const sceneRef = useRef<THREE.Scene>();
+
+  useEffect(() => {
+    return () => {
+      if (Platform.OS !== 'web') {
+        AR.stopAsync();
+      }
+      if (requestRef.current) cancelAnimationFrame(requestRef.current);
+    };
+  }, []);
+
+  const onContextCreate = async (gl: ExpoWebGLRenderingContext) => {
+    const { drawingBufferWidth: width, drawingBufferHeight: height } = gl;
+    await AR.startAsync(gl);
+    const scene = new THREE.Scene();
+    sceneRef.current = scene;
+    const camera = new THREE.PerspectiveCamera(70, width / height, 0.01, 1000);
+    const renderer = new Renderer({ gl });
+    renderer.setSize(width, height);
+    const light = new THREE.AmbientLight(0xffffff);
+    scene.add(light);
+
+    const asset = Asset.fromModule(model);
+    await asset.downloadAsync();
+    const loader = new GLTFLoader();
+    const gltf = await loader.loadAsync(asset.localUri || '');
+    const obj = gltf.scene;
+    obj.position.z = -0.5;
+    obj.scale.set(0.2, 0.2, 0.2);
+    scene.add(obj);
+
+    onARReady?.(true);
+    setReady(true);
+
+    const render = () => {
+      requestRef.current = requestAnimationFrame(render);
+      renderer.render(scene, camera);
+      gl.endFrameEXP();
+    };
+    render();
+  };
+
+  if (Platform.OS === 'web') {
+    return <EmojiFallback objectName={objectName} showAnimation={showAnimation} />;
+  }
+
+  return <GLView style={{ flex: 1 }} onContextCreate={onContextCreate} />;
 }
 
 const styles = StyleSheet.create({
@@ -193,21 +219,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.9)',
     fontSize: 16,
     marginLeft: 8,
-    fontWeight: '500',
-  },
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.8)',
-  },
-  loadingText: {
-    color: '#FFFFFF',
-    fontSize: 16,
     fontWeight: '500',
   },
 });

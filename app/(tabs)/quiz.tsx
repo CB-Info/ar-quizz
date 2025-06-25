@@ -142,7 +142,8 @@ export default function QuizScreen() {
           </View>
         ) : (
           <ARView
-            objectName={currentQuestionData.model}
+            model={currentQuestionData.model}
+            objectName={currentQuestionData.english}
             onARReady={setArReady}
             showAnimation={showFeedback && isCorrect}
           />

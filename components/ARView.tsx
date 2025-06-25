@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
-import { Camera, Cube } from 'lucide-react-native';
+import { Camera, Box } from 'lucide-react-native';
 
 interface ARViewProps {
   objectName: string;
@@ -99,7 +99,7 @@ export default function ARView({ objectName, onARReady, showAnimation }: ARViewP
         </View>
 
         <View style={styles.arInstructions}>
-          <Cube size={20} color="rgba(255,255,255,0.8)" />
+          <Box size={20} color="rgba(255,255,255,0.8)" />
           <Text style={styles.instructionText}>
             Objet 3D: {objectName}
           </Text>

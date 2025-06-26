@@ -1,17 +1,18 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
-import { GLView } from 'expo-gl';
-import ExpoTHREE, { Renderer, AR } from 'expo-three';
-import * as THREE from 'three';
-import { Asset } from 'expo-asset';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import React, { useEffect, useState, Suspense } from 'react';
+import { View, Text, StyleSheet, Platform, StyleProp, ViewStyle } from 'react-native';
+import { Camera, useCameraDevices } from 'react-native-vision-camera';
 import { Camera as CameraIcon, Box } from 'lucide-react-native';
+import { Canvas, useLoader } from '@react-three/fiber/native';
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import { Asset } from 'expo-asset';
 
 interface ARViewProps {
   model: any;
   objectName: string;
   onARReady?: (ready: boolean) => void;
   showAnimation?: boolean;
+  style?: StyleProp<ViewStyle>;
 }
 
 function EmojiFallback({ objectName, showAnimation }: { objectName: string; showAnimation?: boolean }) {
@@ -91,85 +92,39 @@ function EmojiFallback({ objectName, showAnimation }: { objectName: string; show
   );
 }
 
-export default function ARView({ model, objectName, onARReady, showAnimation }: ARViewProps) {
-  const [ready, setReady] = useState(false);
-  const requestRef = useRef<number>();
-  const sceneRef = useRef<THREE.Scene>();
+function Model({ model }: { model: any }) {
+  const asset = Asset.fromModule(model);
+  const gltf = useLoader(GLTFLoader, asset.uri || asset.localUri || '');
+  return <primitive object={gltf.scene} scale={0.2} position={[0, 0, -1]} />;
+}
+
+export default function ARView({ model, objectName, onARReady, showAnimation, style }: ARViewProps) {
+  const devices = useCameraDevices();
+  const device = devices.back;
 
   useEffect(() => {
-    return () => {
-      if (Platform.OS !== 'web') {
-        AR.stopAsync();
-      }
-      if (requestRef.current) cancelAnimationFrame(requestRef.current);
-    };
-  }, []);
-
-  const onContextCreate = async (gl: ExpoWebGLRenderingContext) => {
-    const { drawingBufferWidth: width, drawingBufferHeight: height } = gl;
-    await AR.startAsync(gl);
-    AR.setPlaneDetection?.(AR.PlaneDetectionTypes?.Horizontal);
-
-    const scene = new THREE.Scene();
-    sceneRef.current = scene;
-
-    const camera = ExpoTHREE?.AR?.createARCamera
-      ? ExpoTHREE.AR.createARCamera(width, height, 0.01, 1000)
-      : new THREE.PerspectiveCamera(70, width / height, 0.01, 1000);
-    camera.matrixAutoUpdate = false;
-    const renderer = new Renderer({ gl });
-    renderer.setSize(width, height);
-    const light = new THREE.AmbientLight(0xffffff);
-    scene.add(light);
-
-    const asset = Asset.fromModule(model);
-    await asset.downloadAsync();
-    const loader = new GLTFLoader();
-    let obj: THREE.Object3D | null = null;
-    try {
-      const gltf = await loader.loadAsync(asset.localUri || '');
-      obj = gltf.scene;
-      obj.position.z = -0.5;
-      obj.scale.set(0.2, 0.2, 0.2);
-      scene.add(obj);
-    } catch (e) {
-      console.warn('Failed to load GLTF', e);
-    }
-
-    onARReady?.(true);
-    setReady(true);
-
-    const render = () => {
-      const frame = AR.getCurrentFrame?.();
-      if (frame?.camera) {
-        const { transform, projectionMatrix } = frame.camera as any;
-        if (transform) {
-          camera.matrix.fromArray(transform);
-          camera.updateMatrixWorld(true);
-        }
-        if ((camera as any).projectionMatrix && projectionMatrix) {
-          (camera as any).projectionMatrix.fromArray(projectionMatrix);
-        }
-        if (obj && frame.anchors?.length && !obj.userData.placed) {
-          const anchor: any = frame.anchors[0];
-          if (anchor.center) {
-            obj.position.set(anchor.center.x, anchor.center.y, anchor.center.z);
-            obj.userData.placed = true;
-          }
-        }
-      }
-
-      renderer.render(scene, camera);
-      gl.endFrameEXP();
-    };
-    renderer.setAnimationLoop(render);
-  };
+    if (device) onARReady?.(true);
+  }, [device, onARReady]);
 
   if (Platform.OS === 'web') {
     return <EmojiFallback objectName={objectName} showAnimation={showAnimation} />;
   }
 
-  return <GLView style={{ flex: 1 }} onContextCreate={onContextCreate} />;
+  if (!device) {
+    return <View style={[{ flex: 1, backgroundColor: '#000' }, style]} />;
+  }
+
+  return (
+    <View style={[{ flex: 1 }, style]}>
+      <Camera style={StyleSheet.absoluteFill} device={device} isActive />
+      <Canvas style={StyleSheet.absoluteFill} onCreated={() => onARReady?.(true)}>
+        <ambientLight intensity={1} />
+        <Suspense fallback={null}>
+          <Model model={model} />
+        </Suspense>
+      </Canvas>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({

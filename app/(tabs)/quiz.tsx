@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Check, X, RotateCcw, Camera } from 'lucide-react-native';
-import ARView from '@/components/ARView';
+import ARViewReactVision from '@/components/ARViewReactVision';
 import Feedback from '@/components/Feedback';
 import { questions } from '@/services/questions';
 import { saveQuizSession } from '@/services/storage';
@@ -141,7 +141,7 @@ export default function QuizScreen() {
             </Text>
           </View>
         ) : (
-          <ARView
+          <ARViewReactVision
             model={currentQuestionData.model}
             objectName={currentQuestionData.english}
             onARReady={setArReady}

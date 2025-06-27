@@ -1,13 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
-import { GLView } from 'expo-gl';
-import ExpoTHREE, { Renderer, AR } from 'expo-three';
-import * as THREE from 'three';
-import { Asset } from 'expo-asset';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import React from 'react';
+import { Platform, StyleSheet, View, Text } from 'react-native';
+import { ViroARSceneNavigator, ViroARScene, ViroARPlaneSelector, Viro3DObject, ViroAmbientLight } from '@reactvision/react-viro';
 import { Camera as CameraIcon, Box } from 'lucide-react-native';
 
-interface ARViewProps {
+interface ARViewReactVisionProps {
   model: any;
   objectName: string;
   onARReady?: (ready: boolean) => void;
@@ -91,85 +87,29 @@ function EmojiFallback({ objectName, showAnimation }: { objectName: string; show
   );
 }
 
-export default function ARView({ model, objectName, onARReady, showAnimation }: ARViewProps) {
-  const [ready, setReady] = useState(false);
-  const requestRef = useRef<number>();
-  const sceneRef = useRef<THREE.Scene>();
+function ModelScene({ model, onARReady }: { model: any; onARReady?: () => void }) {
+  return (
+    <ViroARScene onTrackingUpdated={(state) => state === 'NORMAL' && onARReady?.() }>
+      <ViroARPlaneSelector>
+        <ViroAmbientLight color="#FFFFFF" />
+        <Viro3DObject source={model} type="GLB" />
+      </ViroARPlaneSelector>
+    </ViroARScene>
+  );
+}
 
-  useEffect(() => {
-    return () => {
-      if (Platform.OS !== 'web') {
-        AR.stopAsync();
-      }
-      if (requestRef.current) cancelAnimationFrame(requestRef.current);
-    };
-  }, []);
-
-  const onContextCreate = async (gl: ExpoWebGLRenderingContext) => {
-    const { drawingBufferWidth: width, drawingBufferHeight: height } = gl;
-    await AR.startAsync(gl);
-    AR.setPlaneDetection?.(AR.PlaneDetectionTypes?.Horizontal);
-
-    const scene = new THREE.Scene();
-    sceneRef.current = scene;
-
-    const camera = ExpoTHREE?.AR?.createARCamera
-      ? ExpoTHREE.AR.createARCamera(width, height, 0.01, 1000)
-      : new THREE.PerspectiveCamera(70, width / height, 0.01, 1000);
-    camera.matrixAutoUpdate = false;
-    const renderer = new Renderer({ gl });
-    renderer.setSize(width, height);
-    const light = new THREE.AmbientLight(0xffffff);
-    scene.add(light);
-
-    const asset = Asset.fromModule(model);
-    await asset.downloadAsync();
-    const loader = new GLTFLoader();
-    let obj: THREE.Object3D | null = null;
-    try {
-      const gltf = await loader.loadAsync(asset.localUri || '');
-      obj = gltf.scene;
-      obj.position.z = -0.5;
-      obj.scale.set(0.2, 0.2, 0.2);
-      scene.add(obj);
-    } catch (e) {
-      console.warn('Failed to load GLTF', e);
-    }
-
-    onARReady?.(true);
-    setReady(true);
-
-    const render = () => {
-      const frame = AR.getCurrentFrame?.();
-      if (frame?.camera) {
-        const { transform, projectionMatrix } = frame.camera as any;
-        if (transform) {
-          camera.matrix.fromArray(transform);
-          camera.updateMatrixWorld(true);
-        }
-        if ((camera as any).projectionMatrix && projectionMatrix) {
-          (camera as any).projectionMatrix.fromArray(projectionMatrix);
-        }
-        if (obj && frame.anchors?.length && !obj.userData.placed) {
-          const anchor: any = frame.anchors[0];
-          if (anchor.center) {
-            obj.position.set(anchor.center.x, anchor.center.y, anchor.center.z);
-            obj.userData.placed = true;
-          }
-        }
-      }
-
-      renderer.render(scene, camera);
-      gl.endFrameEXP();
-    };
-    renderer.setAnimationLoop(render);
-  };
-
+export default function ARViewReactVision({ model, objectName, onARReady, showAnimation }: ARViewReactVisionProps) {
   if (Platform.OS === 'web') {
     return <EmojiFallback objectName={objectName} showAnimation={showAnimation} />;
   }
 
-  return <GLView style={{ flex: 1 }} onContextCreate={onContextCreate} />;
+  return (
+    <ViroARSceneNavigator
+      autofocus
+      initialScene={{ scene: () => <ModelScene model={model} onARReady={() => onARReady?.(true)} /> }}
+      style={{ flex: 1 }}
+    />
+  );
 }
 
 const styles = StyleSheet.create({
@@ -251,3 +191,4 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 });
+

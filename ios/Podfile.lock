@@ -280,9 +280,6 @@ PODS:
     - ExpoModulesCore
   - ExpoFont (13.3.1):
     - ExpoModulesCore
-  - ExpoGL (15.1.6):
-    - ExpoModulesCore
-    - ReactCommon/turbomodule/core
   - ExpoHaptics (14.1.4):
     - ExpoModulesCore
   - ExpoHead (5.1.0):
@@ -2376,7 +2373,6 @@ DEPENDENCIES:
   - ExpoCamera (from `../node_modules/expo-camera/ios`)
   - ExpoFileSystem (from `../node_modules/expo-file-system/ios`)
   - ExpoFont (from `../node_modules/expo-font/ios`)
-  - ExpoGL (from `../node_modules/expo-gl`)
   - ExpoHaptics (from `../node_modules/expo-haptics/ios`)
   - ExpoHead (from `../node_modules/expo-router/ios`)
   - ExpoKeepAwake (from `../node_modules/expo-keep-awake/ios`)
@@ -2502,8 +2498,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-file-system/ios"
   ExpoFont:
     :path: "../node_modules/expo-font/ios"
-  ExpoGL:
-    :path: "../node_modules/expo-gl"
   ExpoHaptics:
     :path: "../node_modules/expo-haptics/ios"
   ExpoHead:
@@ -2694,7 +2688,6 @@ SPEC CHECKSUMS:
   ExpoCamera: 1667b34b8ba4b8015561808e38dd0a281a29da1b
   ExpoFileSystem: c36eb8155eb2381c83dda7dc210e3eec332368b6
   ExpoFont: abbb91a911eb961652c2b0a22eef801860425ed6
-  ExpoGL: 024e340f6b810a62624be380f3902ec6e491b78b
   ExpoHaptics: 0ff6e0d83cd891178a306e548da1450249d54500
   ExpoHead: 1e65b47330de2164c628da2bddf73d57cac123bf
   ExpoKeepAwake: bf0811570c8da182bfb879169437d4de298376e7

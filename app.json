@@ -8,7 +8,9 @@
     "scheme": "arquiz",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "jsEngine": "hermes",
     "ios": {
+      "jsEngine": "hermes",
       "supportsTablet": true,
       "infoPlist": {
         "NSCameraUsageDescription": "This app needs access to camera for AR functionality.",

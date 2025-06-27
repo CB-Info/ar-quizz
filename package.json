@@ -9,7 +9,8 @@
     "lint": "npx expo lint",
     "test": "jest",
     "android": "expo run:android",
-    "ios": "expo run:ios"
+    "ios": "expo run:ios",
+    "start": "expo start --dev-client"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
@@ -36,7 +37,7 @@
     "lucide-react-native": "^0.475.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
-    "react-native": "^0.79.4",
+    "react-native": "0.79.4",
     "react-native-gesture-handler": "~2.24.0",
     "react-native-reanimated": "~3.17.4",
     "react-native-safe-area-context": "^5.4.0",
